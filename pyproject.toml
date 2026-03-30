@@ -6,8 +6,33 @@ authors = [
     { name = "Heitor Dairel Gonzaga Tavares", email = "heitor.tavares@cscresult.com.br" },
 ]
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.13"
-dependencies = [
-    "rich>=14.3.3",
-    "starkbank-iso8583>=0.6.1",
+dependencies = ["rich>=14.3.3", "starkbank-iso8583>=0.6.1"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+reportAttributeAccessIssue = "none"
+reportMissingTypeStubs = false
+reportUnknownArgumentType = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+include = ["src", "tests"]
+exclude = [
+    "**/.*",
+    "**/venv",
+    "**/.venv",
+    "**/env",
+    "**/.env",
+    "**/node_modules",
+    "**/__pycache__",
 ]
+venv = ".venv"
+venvPath = "."
+executionEnvironments = [{ root = "src" }]
+
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-s --color=yes --tb=short"

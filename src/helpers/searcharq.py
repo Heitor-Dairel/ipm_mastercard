@@ -1,4 +1,4 @@
-from typing import Final, Dict, List, Literal, NamedTuple
+from typing import Final, Dict, List, Literal, NamedTuple, Iterator, Optional
 from pathlib import Path
 from datetime import datetime
 from rich import print
@@ -9,6 +9,7 @@ class TupleManagerFile(NamedTuple):
     path: Path
     file_name: str
     file_dt_time: str
+    bytes_file: memoryview
 
 
 class DateInvalidError(ValueError):
@@ -41,10 +42,15 @@ class OutgoingFileManager:
         FORMAT_DATE: Final[str] = "%d/%m/%Y"
         LIKE_PATH_OUTGOING: Final[str] = "CSU_ACQ_MASTER_OUTGOING_*.TXT"
         FLAG_FOLDER: Final[str] = "(1)"
+        PATH_FILE_ABOSLUTE: Final[Iterator[Path]] = PATH_FILE_OUTGOING_MASTERCARD.rglob(
+            LIKE_PATH_OUTGOING
+        )
+        data_bytes: Optional[bytes] = None
+        raw: Optional[memoryview] = None
 
         dict_outgoing_arq: Dict[str, Dict[str, TupleManagerFile]] = {}
 
-        for arq in PATH_FILE_OUTGOING_MASTERCARD.rglob(LIKE_PATH_OUTGOING):
+        for arq in PATH_FILE_ABOSLUTE:
 
             if FLAG_FOLDER not in arq.parent.name:
 
@@ -64,10 +70,13 @@ class OutgoingFileManager:
                 if f_dt_str not in dict_outgoing_arq:
                     dict_outgoing_arq[f_dt_str] = {}
 
+                data_bytes = Path(arq.resolve()).read_bytes()
+                raw = memoryview(data_bytes)
                 dict_outgoing_arq[f_dt_str][clico_outgoing_master] = TupleManagerFile(
                     path=arq.resolve(),
                     file_name=arq.name,
                     file_dt_time=f_dt_time_str,
+                    bytes_file=raw,
                 )
 
         return dict_outgoing_arq
@@ -83,7 +92,7 @@ class OutgoingFileManager:
             msg = f"Não existe arquivo para a data '{date_file}'"
             raise MissingFileForDateError(msg)
 
-        if cycle is not None and cycle not in self.OUTGOING_FILES[date_file]:
+        if cycle not in self.OUTGOING_FILES[date_file]:
 
             msg = f"O ciclo '{cycle}' não foi encontrado para a data '{date_file}'"
 

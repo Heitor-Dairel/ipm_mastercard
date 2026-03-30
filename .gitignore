@@ -100,3 +100,4 @@ htmlcov/
 *.bak
 *.swp
 *.swo
+*.data

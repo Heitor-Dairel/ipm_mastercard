@@ -1,10 +1,8 @@
 from typing import List, Final, Tuple, Dict, Any, Literal
-from src.helpers import OutgoingFileManager
-from starkbank.iso8583 import mastercard
+from ..helpers import OutgoingFileManager
+from ..template import mastercard
 from starkbank import iso8583
 from pathlib import Path
-import sys
-import base64
 
 
 class ISO8583ParseError(Exception):
@@ -61,8 +59,9 @@ class MastercardISO8583Parse(OutgoingFileManager):
         append_mti_main = parser_mti_main.append
         append_mti_secondary = parser_mti_secondary.append
 
-        while index < LEN_RAW:
-            try:
+        try:
+            while index < LEN_RAW:
+
                 payload, consumed = extract_iso(raw=raw, index=index, len_raw=LEN_RAW)
                 index += consumed
 
@@ -71,18 +70,14 @@ class MastercardISO8583Parse(OutgoingFileManager):
                 )
 
                 if message_parser["MTI"] == self._MTI:
-                    de055_current: bytes = message_parser["DE055"]
-                    de055_base64: bytes = base64.b64decode(de055_current)
-                    message_parser["DE055"] = de055_base64.hex().upper()
                     append_mti_main(message_parser)
                 else:
                     append_mti_secondary(message_parser)
-
                 msg_count += 1
 
-            except Exception as e:
-                msg_error = f"Erro na mensagem #{msg_count + 1} (offset {index})"
-                raise ISO8583ParseError(msg_error) from e
+        except Exception as e:
+            msg_error = f"Erro na mensagem #{msg_count + 1} (offset {index})"
+            raise ISO8583ParseError(msg_error) from e
 
         return parser_mti_main, parser_mti_secondary
 
