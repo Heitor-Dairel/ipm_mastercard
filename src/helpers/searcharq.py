@@ -41,20 +41,17 @@ class FileManagerProcessadora:
 
         self._OUTGOING_FILES: Final[FileLoadProcessadora] = self._load_outgoing_files()
 
-    def _format_outgoing_files(
-        self, path_file: Path, path_date: str
-    ) -> Tuple[str, ...]:
+    def _format_outgoing_files(self, path_file: Path) -> Tuple[str, ...]:
 
         file_name = path_file.name
         parts_nam_file: List[str] = path_file.stem.split("_")
         clico_outgoing_master: str = parts_nam_file[-3]
-
-        dt_time_file: str = parts_nam_file[-2] + parts_nam_file[-1]
-
-        f_dt_time_str: str = datetime.strptime(dt_time_file, "%d%m%Y%H%M%S").strftime(
-            FORMAT_DATE_TIME
-        )
-        f_dt_str: str = datetime.strptime(path_date, "%Y%m%d").strftime(FORMAT_DATE)
+        file_dt: str = parts_nam_file[-2]
+        file_time: str = parts_nam_file[-1]
+        f_dt_time_str: str = datetime.strptime(
+            f"{file_dt} {file_time}", "%d%m%Y %H%M%S"
+        ).strftime(FORMAT_DATE_TIME)
+        f_dt_str: str = datetime.strptime(file_dt, "%d%m%Y").strftime(FORMAT_DATE)
 
         return file_name, clico_outgoing_master, f_dt_str, f_dt_time_str
 
@@ -73,12 +70,10 @@ class FileManagerProcessadora:
 
         for arq in arquivos:
 
-            if FLAG_FOLDER not in arq.parent.name and "ARQUIVOS" not in arq.parent.name:
+            if FLAG_FOLDER not in arq.parent.name:
 
                 file_name, clico_outgoing_master, f_dt_str, f_dt_time_str = (
-                    self._format_outgoing_files(
-                        path_file=arq, path_date=arq.parent.name
-                    )
+                    self._format_outgoing_files(path_file=arq)
                 )
 
                 if f_dt_str not in dict_outgoing_arq:
@@ -139,12 +134,12 @@ class FileManagerData:
         file_name = path_file.name
         parts_nam_file: List[str] = path_file.stem.split("_")
         clico_outgoing_master: str = parts_nam_file[-3]
-        dt_file: str = parts_nam_file[-2]
+        file_dt: str = parts_nam_file[-2]
         file_time: str = parts_nam_file[-1]
         f_dt_time_str: str = datetime.strptime(
-            f"{dt_file} {file_time}", "%d%m%Y %H%M%S"
+            f"{file_dt} {file_time}", "%d%m%Y %H%M%S"
         ).strftime(FORMAT_DATE_TIME)
-        f_dt_str: str = datetime.strptime(dt_file, "%d%m%Y").strftime(FORMAT_DATE)
+        f_dt_str: str = datetime.strptime(file_dt, "%d%m%Y").strftime(FORMAT_DATE)
 
         return file_name, clico_outgoing_master, f_dt_str, f_dt_time_str
 
