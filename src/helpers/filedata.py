@@ -21,7 +21,7 @@ class FilesDataSaving:
 
         return DATA_DIR
 
-    def save_csv(
+    def _save_csv(
         self, data: List[Dict[str, Any]], headers: List[str], file_name: str
     ) -> None:
 
@@ -36,7 +36,7 @@ class FilesDataSaving:
             if headers:
                 writer.writerows(data)
 
-    def save_txt(self, data: List[Dict[str, Any]], file_name: str) -> None:
+    def _save_txt(self, data: List[Dict[str, Any]], file_name: str) -> None:
 
         with open(
             self._output_path_abs / f"{file_name}.txt.log", "w", encoding="utf-8"

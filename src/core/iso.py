@@ -108,7 +108,7 @@ class MastercardISO8583Parse(FilesDataSaving):
 
         if self._file_name:
 
-            self.save_txt(data=parse, file_name=self._file_name)
+            self._save_txt(data=parse, file_name=self._file_name)
 
     def parse_ipm(
         self,
