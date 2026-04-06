@@ -1,18 +1,25 @@
-from typing import Final, Dict, List, Literal, NamedTuple, Iterator, TypeAlias, Tuple
+from typing import (
+    Final,
+    Dict,
+    List,
+    Literal,
+    NamedTuple,
+    Iterator,
+    TypeAlias,
+    Tuple,
+    Optional,
+)
 from pathlib import Path
 from datetime import datetime
 from rich import print
 
-
-FORMAT_DATE_TIME: Final[str] = "%d/%m/%Y %H:%M:%S"
-FORMAT_DATE: Final[str] = "%d/%m/%Y"
-
-
-def get_bytes_to_file(file_path: Path) -> memoryview:
-    data_bytes: bytes = file_path.read_bytes()
-    raw: memoryview = memoryview(data_bytes)
-
-    return raw
+_BASE_DIR: Final[Path] = Path(
+    r"C:\Users\heitor.tavares\OneDrive - TRIVALE ADMINISTRACAO LTDA"
+    r"\Operação Processadora - Arquivos CSU"
+)
+_FLAG_FOLDER: Final[str] = "(1)"
+_FORMAT_DATE_TIME: Final[str] = "%d/%m/%Y %H:%M:%S"
+_FORMAT_DATE: Final[str] = "%d/%m/%Y"
 
 
 class TupleManagerFile(NamedTuple):
@@ -26,188 +33,78 @@ FileLoadData: TypeAlias = Dict[str, Dict[str, TupleManagerFile]]
 FileLoadProcessadora: TypeAlias = Dict[str, Dict[str, TupleManagerFile]]
 
 
-class DateInvalidError(ValueError): ...
+class DateInvalidFormat(ValueError): ...
 
 
-class MissingFileForDateError(ValueError): ...
+def _validate_date(date: str) -> None:
+
+    formato: str = "%d/%m/%Y"
+    msg: str = f"Formato de data está inválido '{date}'"
+    try:
+        datetime.strptime(date, formato)
+    except ValueError as e:
+        raise DateInvalidFormat(msg) from e
 
 
-class MissingCycleForDateError(ValueError): ...
+def _get_bytes_to_file(file_path: Path) -> memoryview:
+    data_bytes: bytes = file_path.read_bytes()
+    raw: memoryview = memoryview(data_bytes)
+
+    return raw
 
 
-class FileManagerProcessadora:
+def _format_outgoing_files(file_path: Path) -> Tuple[str, ...]:
 
-    def __init__(self) -> None:
+    file_name = file_path.name
+    file_name_parts: List[str] = file_path.stem.split("_")
+    file_dt: str = file_name_parts[-2]
+    file_time: str = file_name_parts[-1]
+    f_dt_time_str: str = datetime.strptime(
+        f"{file_dt} {file_time}", "%d%m%Y %H%M%S"
+    ).strftime(_FORMAT_DATE_TIME)
 
-        self._OUTGOING_FILES: Final[FileLoadProcessadora] = self._load_outgoing_files()
-
-    def _format_outgoing_files(self, path_file: Path) -> Tuple[str, ...]:
-
-        file_name = path_file.name
-        parts_nam_file: List[str] = path_file.stem.split("_")
-        clico_outgoing_master: str = parts_nam_file[-3]
-        file_dt: str = parts_nam_file[-2]
-        file_time: str = parts_nam_file[-1]
-        f_dt_time_str: str = datetime.strptime(
-            f"{file_dt} {file_time}", "%d%m%Y %H%M%S"
-        ).strftime(FORMAT_DATE_TIME)
-        f_dt_str: str = datetime.strptime(file_dt, "%d%m%Y").strftime(FORMAT_DATE)
-
-        return file_name, clico_outgoing_master, f_dt_str, f_dt_time_str
-
-    def _load_outgoing_files(self) -> FileLoadProcessadora:
-
-        BASE_DIR: Final[Path] = Path(
-            r"C:\Users\heitor.tavares\OneDrive - TRIVALE ADMINISTRACAO LTDA"
-            r"\Operação Processadora - Arquivos CSU"
-        )
-        FLAG_FOLDER: Final[str] = "(1)"
-        arquivos: Final[Iterator[Path]] = BASE_DIR.rglob(
-            "CSU_ACQ_MASTER_OUTGOING_*.TXT"
-        )
-
-        dict_outgoing_arq: Dict[str, Dict[str, TupleManagerFile]] = {}
-
-        for arq in arquivos:
-
-            if FLAG_FOLDER not in arq.parent.name:
-
-                file_name, clico_outgoing_master, f_dt_str, f_dt_time_str = (
-                    self._format_outgoing_files(path_file=arq)
-                )
-
-                if f_dt_str not in dict_outgoing_arq:
-                    dict_outgoing_arq[f_dt_str] = {}
-
-                raw: memoryview = get_bytes_to_file(arq)
-                dict_outgoing_arq[f_dt_str][clico_outgoing_master] = TupleManagerFile(
-                    file_name=file_name,
-                    file_dt_time=f_dt_time_str,
-                    bytes_file=raw,
-                )
-
-        return dict_outgoing_arq
-
-    def get_files_for_cycle(
-        self, date_file: str, cycle: Literal["CIC1", "CIC2", "CIC3"]
-    ) -> TupleManagerFile:
-
-        msg: str = ""
-
-        if date_file not in self._OUTGOING_FILES:
-
-            msg = f"Não existe arquivo para a data '{date_file}'"
-            raise MissingFileForDateError(msg)
-
-        if cycle not in self._OUTGOING_FILES[date_file]:
-
-            msg = f"O ciclo '{cycle}' não foi encontrado para a data '{date_file}'"
-
-            raise MissingCycleForDateError(msg)
-
-        return self._OUTGOING_FILES[date_file][cycle]
-
-    def get_files_for_date(self, date_file: str) -> Dict[str, TupleManagerFile]:
-
-        msg: str = ""
-
-        if date_file not in self._OUTGOING_FILES:
-
-            msg = f"Não existe arquivo para a data '{date_file}'"
-            raise MissingFileForDateError(msg)
-
-        return self._OUTGOING_FILES[date_file]
-
-    def get_all_files(self) -> FileLoadProcessadora:
-
-        return self._OUTGOING_FILES
+    return file_name, f_dt_time_str
 
 
-class FileManagerData:
+def _load_outgoing_files(
+    file_date: str, cycle: Literal["CIC1", "CIC2", "CIC3"]
+) -> Optional[TupleManagerFile]:
 
-    def __init__(self) -> None:
+    file_date_format: str = datetime.strptime(file_date, "%d/%m/%Y").strftime("%d%m%Y")
+    files: Final[Iterator[Path]] = _BASE_DIR.rglob(
+        f"CSU_ACQ_MASTER_OUTGOING_{cycle}_{file_date_format}*.TXT"
+    )
 
-        self._OUTGOING_FILES: Final[FileLoadData] = self._load_outgoing_files()
+    file: Optional[TupleManagerFile] = None
 
-    def _format_outgoing_files(self, path_file: Path) -> Tuple[str, ...]:
+    for arq in files:
 
-        file_name = path_file.name
-        parts_nam_file: List[str] = path_file.stem.split("_")
-        clico_outgoing_master: str = parts_nam_file[-3]
-        file_dt: str = parts_nam_file[-2]
-        file_time: str = parts_nam_file[-1]
-        f_dt_time_str: str = datetime.strptime(
-            f"{file_dt} {file_time}", "%d%m%Y %H%M%S"
-        ).strftime(FORMAT_DATE_TIME)
-        f_dt_str: str = datetime.strptime(file_dt, "%d%m%Y").strftime(FORMAT_DATE)
+        if _FLAG_FOLDER not in arq.parent.name:
 
-        return file_name, clico_outgoing_master, f_dt_str, f_dt_time_str
-
-    def _load_outgoing_files(self) -> FileLoadData:
-
-        BASE_DIR: Final[Path] = Path(__file__).parent.parent.parent
-        DATA_DIR: Final[Path] = BASE_DIR / "data"
-        arquivos = DATA_DIR.glob("CSU_ACQ_MASTER_OUTGOING_*.TXT")
-        dict_outgoing_arq: FileLoadData = {}
-
-        for arq in arquivos:
-            file_name, clico_outgoing_master, f_dt_str, f_dt_time_str = (
-                self._format_outgoing_files(path_file=arq)
-            )
-            if f_dt_str not in dict_outgoing_arq:
-                dict_outgoing_arq[f_dt_str] = {}
-
-            raw: memoryview = get_bytes_to_file(arq)
-            dict_outgoing_arq[f_dt_str][clico_outgoing_master] = TupleManagerFile(
+            file_name, f_dt_time_str = _format_outgoing_files(file_path=arq)
+            raw: memoryview = _get_bytes_to_file(arq)
+            file = TupleManagerFile(
                 file_name=file_name,
                 file_dt_time=f_dt_time_str,
                 bytes_file=raw,
             )
-        return dict_outgoing_arq
 
-    def get_files_for_cycle(
-        self, date_file: str, cycle: Literal["CIC1", "CIC2", "CIC3"]
-    ) -> TupleManagerFile:
+    return file
 
-        msg: str = ""
 
-        if date_file not in self._OUTGOING_FILES:
+def search_arq(
+    date_file: str, cycle: Literal["CIC1", "CIC2", "CIC3"]
+) -> Optional[TupleManagerFile]:
 
-            msg = f"Não existe arquivo para a data '{date_file}'"
-            raise MissingFileForDateError(msg)
-
-        if cycle not in self._OUTGOING_FILES[date_file]:
-
-            msg = f"O ciclo '{cycle}' não foi encontrado para a data '{date_file}'"
-
-            raise MissingCycleForDateError(msg)
-
-        return self._OUTGOING_FILES[date_file][cycle]
-
-    def get_files_for_date(self, date_file: str) -> Dict[str, TupleManagerFile]:
-
-        msg: str = ""
-
-        if date_file not in self._OUTGOING_FILES:
-
-            msg = f"Não existe arquivo para a data '{date_file}'"
-            raise MissingFileForDateError(msg)
-
-        return self._OUTGOING_FILES[date_file]
-
-    def get_all_files(self) -> FileLoadData:
-
-        return self._OUTGOING_FILES
+    _validate_date(date=date_file)
+    outgoing_file: Optional[TupleManagerFile] = _load_outgoing_files(
+        file_date=date_file, cycle=cycle
+    )
+    return outgoing_file
 
 
 if __name__ == "__main__":
 
-    arq = FileManagerProcessadora()
+    arq = search_arq(date_file="20/03/2026", cycle="CIC1")
 
-    # a = arq.get_files_for_date(date_file="25/03/2026")
-
-    a = arq.get_all_files()
-
-    print(a)
-
-    # print(FileManagerData().get_files_for_date(date_file="26/05/2025"))
+    print(arq)

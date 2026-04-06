@@ -1,6 +1,7 @@
 from typing import Dict, List, Any, Final
 from pathlib import Path
 import csv
+import json
 
 
 class FilesDataSaving:
@@ -42,7 +43,8 @@ class FilesDataSaving:
         ) as arquivo:
 
             for i in data:
-                arquivo.write(f"{i}\n")
+                json_dict = json.dumps(i, indent=4, ensure_ascii=False)
+                arquivo.write(f"{json_dict}\n")
 
 
 if __name__ == "__main__":

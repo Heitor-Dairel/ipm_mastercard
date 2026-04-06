@@ -10,5 +10,3 @@ retirar = ["DE048", "DE055"]
 file = MastercardISO8583Parse()
 
 iso = file.parse_ipm(date_file=datas, cycle="CIC1")
-
-file.output_excel(parse=iso, field=retirar)

@@ -1,5 +1,5 @@
 from typing import List, Final, Tuple, Dict, Any, Literal, Optional, Set
-from ..helpers import get_model_path_file, FilesDataSaving
+from ..helpers import search_arq, FilesDataSaving, TupleManagerFile
 from ..template import mastercard
 from ..util import print_custom_text
 from starkbank import iso8583
@@ -10,15 +10,12 @@ class ISO8583ParseError(Exception): ...
 
 class MastercardISO8583Parse(FilesDataSaving):
 
-    def __init__(self, path_search_model: bool = True) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self._MTI: Final[str] = "1240"
         self._file_name: str = ""
         self._file_dt_time: str = ""
         self._file_cycle: str = ""
-        self._path_search_model = get_model_path_file(
-            path_search_model=path_search_model
-        )
 
     def _extract_iso_payload(
         self, raw: memoryview, index: int, len_raw: int
@@ -161,17 +158,21 @@ class MastercardISO8583Parse(FilesDataSaving):
         date_file: str,
         cycle: Literal["CIC1", "CIC2", "CIC3"],
         logging: bool = True,
-    ) -> List[Dict[str, Any]]:
+    ) -> Optional[List[Dict[str, Any]]]:
 
         self._file_cycle = cycle
 
-        self._file_name, self._file_dt_time, bytes_file = (
-            self._path_search_model.get_files_for_cycle(
-                date_file=date_file, cycle=cycle
-            )
+        file_infos: Optional[TupleManagerFile] = search_arq(
+            date_file=date_file, cycle=cycle
         )
 
-        return self._playload_ipm_file(raw=bytes_file, logging=logging)
+        if file_infos:
+
+            self._file_name, self._file_dt_time, bytes_file = file_infos
+
+            return self._playload_ipm_file(raw=bytes_file, logging=logging)
+
+        return None
 
     def output_excel(
         self,
