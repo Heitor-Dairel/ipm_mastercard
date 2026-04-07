@@ -21,7 +21,7 @@ file = MastercardISO8583Parse()
 
 arq_parse = file.parse_ipm(date_file="25/03/2026", cycle="CIC1")
 
-if arq_parse:
+if None:
     print(arq_parse[1])
     print(f"{arq_parse[1]["MTI"]=}")
     print(f"{arq_parse[1]["DE002"]=}")
@@ -50,6 +50,3 @@ if arq_parse:
     print(f"{arq_parse[1]['DE093']=}")
     print(f"{arq_parse[1]['DE094']=}")
     print(f"arq_parse[1][PDS][PDS0158]={arq_parse[1]["PDS"]["PDS0158"].strip()[:2]}")
-
-
-"a".strip

@@ -1,11 +1,10 @@
 from typing import (
     Final,
-    Dict,
     Literal,
     NamedTuple,
     Iterator,
-    TypeAlias,
     Optional,
+    Generator,
 )
 from pathlib import Path
 from datetime import datetime
@@ -15,17 +14,13 @@ _BASE_DIR: Final[Path] = Path(
     r"C:\Users\heitor.tavares\OneDrive - TRIVALE ADMINISTRACAO LTDA"
     r"\Operação Processadora - Arquivos CSU"
 )
-_FLAG_FOLDER: Final[str] = "(1)"
+_FLAG_DIR: Final[str] = "(1)"
 
 
 class TupleManagerFile(NamedTuple):
 
     file_name: str
     bytes_file: memoryview
-
-
-FileLoadData: TypeAlias = Dict[str, Dict[str, TupleManagerFile]]
-FileLoadProcessadora: TypeAlias = Dict[str, Dict[str, TupleManagerFile]]
 
 
 class DateInvalidFormat(ValueError): ...
@@ -41,41 +36,35 @@ def _validate_date(date: str) -> None:
         raise DateInvalidFormat(msg) from e
 
 
-def _get_bytes(file_path: Path) -> memoryview:
+def _file_bytes(file_path: Path) -> memoryview:
     data_bytes: bytes = file_path.read_bytes()
     raw: memoryview = memoryview(data_bytes)
 
     return raw
 
 
-def search_arq(
+def file_search(
     file_date: str, cycle: Literal["CIC1", "CIC2", "CIC3"]
 ) -> Optional[TupleManagerFile]:
 
     _validate_date(date=file_date)
 
     file_date_format: str = datetime.strptime(file_date, "%d/%m/%Y").strftime("%d%m%Y")
-    files: Final[Iterator[Path]] = _BASE_DIR.rglob(
+    files: Iterator[Path] = _BASE_DIR.rglob(
         f"CSU_ACQ_MASTER_OUTGOING_{cycle}_{file_date_format}*.TXT"
     )
 
-    file: Optional[TupleManagerFile] = None
+    file: Generator[TupleManagerFile] = (
+        TupleManagerFile(file_name=arq.stem, bytes_file=_file_bytes(arq))
+        for arq in files
+        if _FLAG_DIR not in arq.parent.name
+    )
 
-    for arq in files:
-
-        if _FLAG_FOLDER not in arq.parent.name:
-
-            raw: memoryview = _get_bytes(arq)
-            file = TupleManagerFile(
-                file_name=arq.stem,
-                bytes_file=raw,
-            )
-
-    return file
+    return next(file, None)
 
 
 if __name__ == "__main__":
 
-    arq = search_arq(file_date="20/03/2026", cycle="CIC1")
+    arq = file_search(file_date="2/01/2026", cycle="CIC1")
 
     print(arq)

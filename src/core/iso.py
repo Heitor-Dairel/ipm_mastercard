@@ -1,5 +1,5 @@
-from typing import List, Final, Tuple, Dict, Any, Literal, Optional
-from ..helpers import search_arq, FilesDataSaving, TupleManagerFile
+from typing import List, Tuple, Dict, Any, Literal, Optional
+from ..helpers import file_search, FilesDataSaving, TupleManagerFile
 from ..template import mastercard
 from ..util import print_custom_text
 from starkbank import iso8583
@@ -12,9 +12,6 @@ class MastercardISO8583Parse(FilesDataSaving):
 
     def __init__(self) -> None:
         super().__init__()
-        self._MTI: Final[str] = "1240"
-        self._file_name: Optional[str] = ""
-        self._file_cycle: str = ""
 
     def _extract_iso_payload(
         self, raw: memoryview, index: int, len_raw: int
@@ -45,9 +42,7 @@ class MastercardISO8583Parse(FilesDataSaving):
 
         return bytes(payload), index_current - start
 
-    def _playload_ipm_file(
-        self, raw: memoryview, logging: bool = True
-    ) -> List[Dict[str, Any]]:
+    def _playload_ipm_file(self, raw: memoryview) -> Tuple[List[Dict[str, Any]], int]:
 
         len_raw: int = len(raw)
         index: int = 0
@@ -74,22 +69,10 @@ class MastercardISO8583Parse(FilesDataSaving):
             msg_error = f"Erro na mensagem #{msg_count + 1} (offset {index})"
             raise ISO8583ParseError(msg_error) from e
 
-        if logging:
-            self._logging(
-                file_name=self._file_name,
-                cycle=self._file_cycle,
-                row_count=msg_count,
-            )
-
-        self._output_txt_logging(parse=parse_mti)
-
-        return parse_mti
+        return parse_mti, msg_count
 
     def _logging(
-        self,
-        file_name: Optional[str],
-        cycle: Optional[str],
-        row_count: int,
+        self, file_name: str, row_count: int, data: List[Dict[str, Any]]
     ) -> None:
 
         separator: str = "=" * 63
@@ -97,18 +80,13 @@ class MastercardISO8583Parse(FilesDataSaving):
         body: str = (
             f"{separator}\n"
             f" - FILE NAME: {file_name}\n"
-            f" - CYCLE: {cycle}\n"
             f" - ROW COUNT: {row_count}\n"
-            f"{separator}\n\n"
+            f"{separator}\n"
         )
 
+        self._save_txt(data=data, file_name=file_name)
+
         print_custom_text(text=body, highlight=["Bold"], color_foreground="OrangeRed1")
-
-    def _output_txt_logging(self, parse: List[Dict[str, Any]]) -> None:
-
-        if self._file_name:
-
-            self._save_txt(data=parse, file_name=self._file_name)
 
     def parse_ipm(
         self,
@@ -117,17 +95,17 @@ class MastercardISO8583Parse(FilesDataSaving):
         logging: bool = True,
     ) -> Optional[List[Dict[str, Any]]]:
 
-        self._file_cycle = cycle
-
-        file_infos: Optional[TupleManagerFile] = search_arq(
+        file_infos: Optional[TupleManagerFile] = file_search(
             file_date=date_file, cycle=cycle
         )
 
         if file_infos:
+            file_name, bytes_file = file_infos
+            parse_ipm, msg_count = self._playload_ipm_file(raw=bytes_file)
+            if logging:
+                self._logging(file_name=file_name, row_count=msg_count, data=parse_ipm)
 
-            self._file_name, bytes_file = file_infos
-
-            return self._playload_ipm_file(raw=bytes_file, logging=logging)
+            return parse_ipm
 
         return None
 

@@ -1,5 +1,5 @@
-from .searcharq import search_arq, TupleManagerFile
+from .searcharq import file_search, TupleManagerFile
 from .filedata import FilesDataSaving
 
 
-__all__ = ["search_arq", "TupleManagerFile", "FilesDataSaving"]
+__all__ = ["file_search", "TupleManagerFile", "FilesDataSaving"]
