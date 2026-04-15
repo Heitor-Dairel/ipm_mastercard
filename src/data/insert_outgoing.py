@@ -1,9 +1,13 @@
 from ..core import MastercardISO8583Parse
-from typing import Optional
+from typing import Optional, List, Literal, Union, Tuple
+from psycopg import Connection, ServerCursor
+from psycopg.rows import TupleRow
 from dotenv import load_dotenv
-from rich import print
 from datetime import datetime
+from rich import print
 import os
+import psycopg
+
 
 load_dotenv()
 
@@ -14,39 +18,189 @@ user: Optional[str] = os.getenv("DB_USERNAME")
 password: Optional[str] = os.getenv("DB_PASSWORD")
 
 
-# print(host, port, db_name, user, password)
+class DbOutgouing:
 
+    _EXISTS_FILE = "SELECT 1 FROM hdg.tb_master_arquivo tma WHERE tma.nome_arquivo = %s"
 
-file = MastercardISO8583Parse()
+    _INSERT_SQL = """
+    INSERT INTO hdg.tb_master_arquivo (nome_arquivo, ciclo, data_referencia) 
+    VALUES (%s, %s, %s) RETURNING id
+    """
 
-arq_parse = file.parse_ipm(date_file="25/03/2026", cycle="CIC1")
-
-if None:
-    print(arq_parse[1])
-    print(f"{arq_parse[1]["MTI"]=}")
-    print(f"{arq_parse[1]["DE002"]=}")
-    print(int(arq_parse[1]["DE004"]) / 100)
-    print(
-        datetime.strptime(arq_parse[1]["DE012"], "%y%m%d%H%M%S").strftime(
-            "%d/%m/%Y %H:%M:%S"
-        )
+    _COPY_SQL = """
+    COPY hdg.tb_master_arquivo_detalhado (
+        mti,
+        numero_cartao,
+        codigo_de_processamento,
+        valor,
+        data_transacao,
+        data_vencimento_cartao,
+        modo_de_entrada_pos,
+        numero_seq_cartao,
+        codigo_funcao,
+        codigo_razao_mensagem,
+        codigo_mcc,
+        dados_referencia_adquirente,
+        codigo_instituicao_remetente,
+        codigo_aprovacao,
+        codigo_servico,
+        id_terminal_aceitante,
+        id_aceitante,
+        nome_local_aceitante,
+        codigo_moeda,
+        id_ciclo_vida_transacao,
+        id_destino_instituicao_transacao,
+        id_originadora_instituicao_transacao,
+        tipo_terminal,
+        ind_nivel_seguranca_comercio_eletronico,
+        expoente_moeada,
+        atividade_comercial,
+        ind_liquidacao,
+        info_consulta_aceitante,
+        id_fiscal_est_comercial_brasil,
+        ind_1_conciliacao_membro,
+        produto,
+        ird,
+        tb_master_arquivo_id
     )
-    print(f"{arq_parse[1]['DE014']=}")
-    print(f"{arq_parse[1]['DE022']=}")
-    print(f"{arq_parse[1]['DE023']=}")
-    print(f"{arq_parse[1]['DE024']=}")
-    print(f"{arq_parse[1]['DE025']=}")
-    print(f"{arq_parse[1]['DE026']=}")
-    print(f"{arq_parse[1]['DE031']=}")
-    print(f"{arq_parse[1]['DE033']=}")
-    print(f"{arq_parse[1]['DE038']=}")
-    print(f"{arq_parse[1]['DE040']=}")
-    print(f"{arq_parse[1]['DE041']=}")
-    print(f"{arq_parse[1]['DE042']=}")
-    print(f"{arq_parse[1]['DE043']=}")
-    print(f"{arq_parse[1]['DE049']=}")
-    print(f"{arq_parse[1]['DE063'].strip()=}")
-    print(f"{arq_parse[1]['DE071']=}")
-    print(f"{arq_parse[1]['DE093']=}")
-    print(f"{arq_parse[1]['DE094']=}")
-    print(f"arq_parse[1][PDS][PDS0158]={arq_parse[1]["PDS"]["PDS0158"].strip()[:2]}")
+    FROM STDIN
+    """
+
+    def __init__(self) -> None:
+        self._conn: Connection[TupleRow] = psycopg.connect(
+            host=host,
+            port=port,
+            dbname=db_name,
+            user=user,
+            password=password,
+        )
+        self._cur: ServerCursor[TupleRow] = self._conn.cursor()
+        self._parse: MastercardISO8583Parse = MastercardISO8583Parse()
+
+    def _date_reference_file(self, file_name: str) -> str:
+
+        file_name_split: List[str] = file_name.split("_")
+
+        date_reference: str = datetime.strptime(file_name_split[-2], "%d%m%Y").strftime(
+            "%d/%m/%Y"
+        )
+
+        return date_reference
+
+    def iso_db(
+        self,
+        date_file: str,
+        cycle: Literal["CIC1", "CIC2", "CIC3"],
+        logging: bool = True,
+    ) -> None:
+
+        file_name: Optional[str] = None
+        date_reference: Optional[str] = None
+        arq_parse: Optional[List[List[Union[int, str, float, None]]]] = None
+
+        parse = self._parse.parse_ipm_db(
+            date_file=date_file, cycle=cycle, logging=logging
+        )
+
+        if parse:
+
+            arq_parse, file_name = parse
+            file_name += ".TXT"
+
+        if arq_parse and file_name:
+
+            date_reference = self._date_reference_file(file_name)
+
+            self._transaction_db(
+                file_name=file_name,
+                cycle=cycle,
+                date_reference=date_reference,
+                parse=arq_parse,
+            )
+
+            return None
+
+    def _exists_file_master(self, file_name: str) -> bool:
+
+        result = self._cur.execute(self._EXISTS_FILE, (file_name,))
+
+        if result.fetchone():
+
+            self._cur.close()
+
+            self._conn.close()
+
+            print(f"O arquivo {file_name}, já foi inserido no banco.")
+
+            return True
+
+        return False
+
+    def _insert_file_db(
+        self,
+        file_name: str,
+        cycle: str,
+        date_reference: str,
+        parse: List[List[Union[int, str, float, None]]],
+    ) -> None:
+
+        arq_parse = parse
+
+        try:
+
+            self._cur.executemany(
+                DbOutgouing._INSERT_SQL,
+                [(file_name, cycle, date_reference)],
+                returning=True,
+            )
+
+            result = self._cur.fetchone()
+
+            row_id: Optional[Tuple[int]] = result
+            new_id = row_id[0] if row_id else 0
+
+            with self._cur.copy(DbOutgouing._COPY_SQL) as copy:
+
+                for row in arq_parse:
+                    row.append(new_id)
+                    copy.write_row(row)
+
+            self._conn.commit()
+
+            qtd_rows_insert: str = f"{len(arq_parse):,}".replace(",", ".")
+
+            print(
+                f"{qtd_rows_insert} de linhas do arquivo {file_name}, foram inseridas com sucesso na tabela TB_MASTER_ARQUIVO_DETALHADO."
+            )
+
+            self._cur.close()
+            self._conn.close()
+
+        except Exception as e:
+
+            self._conn.rollback()
+
+            self._cur.close()
+
+            self._conn.close()
+
+            print(f"Erro: {e}")
+
+        return None
+
+    def _transaction_db(
+        self,
+        file_name: str,
+        cycle: str,
+        date_reference: str,
+        parse: List[List[Union[int, str, float, None]]],
+    ) -> None:
+
+        if not self._exists_file_master(file_name=file_name):
+
+            self._insert_file_db(
+                file_name=file_name,
+                cycle=cycle,
+                date_reference=date_reference,
+                parse=parse,
+            )

@@ -1,8 +1,9 @@
-from typing import List, Tuple, Dict, Any, Literal, Optional
+from typing import List, Tuple, Dict, Any, Literal, Optional, Union
 from ..helpers import file_search, FilesDataSaving, TupleManagerFile
 from ..template import mastercard
 from ..util import print_custom_text
 from starkbank import iso8583
+from datetime import datetime
 
 
 class ISO8583ParseError(Exception): ...
@@ -93,7 +94,7 @@ class MastercardISO8583Parse(FilesDataSaving):
         date_file: str,
         cycle: Literal["CIC1", "CIC2", "CIC3"],
         logging: bool = True,
-    ) -> Optional[List[Dict[str, Any]]]:
+    ) -> Optional[Tuple[List[Dict[str, Any]], str]]:
 
         file_infos: Optional[TupleManagerFile] = file_search(
             file_date=date_file, cycle=cycle
@@ -105,7 +106,73 @@ class MastercardISO8583Parse(FilesDataSaving):
             if logging:
                 self._logging(file_name=file_name, row_count=msg_count, data=parse_ipm)
 
-            return parse_ipm
+            return parse_ipm, file_name
+
+        return None
+
+    def parse_ipm_db(
+        self,
+        date_file: str,
+        cycle: Literal["CIC1", "CIC2", "CIC3"],
+        logging: bool = True,
+    ) -> Optional[Tuple[List[List[Union[int, str, float, None]]], str]]:
+
+        file_infos: Optional[TupleManagerFile] = file_search(
+            file_date=date_file, cycle=cycle
+        )
+
+        list_files: List[List[Union[int, str, float, None]]] = []
+
+        if file_infos:
+            file_name, bytes_file = file_infos
+            parse_ipm, msg_count = self._playload_ipm_file(raw=bytes_file)
+            if logging:
+                self._logging(file_name=file_name, row_count=msg_count, data=parse_ipm)
+
+            for i in parse_ipm:
+
+                if i["MTI"] == "1240":
+
+                    list_files.append(
+                        [
+                            i["MTI"],
+                            i["DE002"],
+                            i["DE003"],
+                            int(i["DE004"]) / 100,
+                            datetime.strptime(i["DE012"], "%y%m%d%H%M%S").strftime(
+                                "%d/%m/%Y %H:%M:%S"
+                            ),
+                            datetime.strptime(i["DE014"], "%y%m").strftime("%y/%m"),
+                            i["DE022"],
+                            i["DE023"],
+                            i["DE024"],
+                            i["DE025"],
+                            int(i["DE026"]),
+                            i["DE031"],
+                            i["DE033"],
+                            i["DE038"],
+                            i.get("DE040"),
+                            i["DE041"],
+                            i["DE042"],
+                            i["DE043"],
+                            i["DE049"],
+                            i["DE063"].strip(),
+                            i["DE093"],
+                            i["DE094"],
+                            i["PDS"]["PDS0023"].strip(),
+                            i["PDS"]["PDS0052"].strip(),
+                            i["PDS"]["PDS0148"].strip(),
+                            i["PDS"]["PDS0158"].strip(),
+                            i["PDS"]["PDS0165"].strip(),
+                            i["PDS"]["PDS0170"].strip(),
+                            i["PDS"]["PDS0220"],
+                            i["PDS"]["PDS0375"],
+                            i["DE063"].strip()[:3],
+                            i["PDS"]["PDS0158"].strip()[:2],
+                        ]
+                    )
+
+            return list_files, file_name
 
         return None
 
