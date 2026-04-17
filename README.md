@@ -39,6 +39,7 @@ The parser performs the following steps:
 - Python 3.x
 - Typing with `typing`
 - String manipulation and binary parsing
+- Starkbank library for final parsing of elements
 - (Optional) Integration with database (PostgreSQL)
 
 ---
