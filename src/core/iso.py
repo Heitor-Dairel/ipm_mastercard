@@ -1,7 +1,7 @@
 from typing import List, Tuple, Dict, Any, Optional
 from ..helpers import file_search, FilesDataSaving, TupleManagerFile
 from ..template import mastercard
-from ..util import print_custom_text
+from ..utils import print_custom_text
 from ..models import ParseDb, ParseIPM, CycleIPM
 from starkbank import iso8583
 from datetime import datetime
