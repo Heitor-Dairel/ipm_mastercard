@@ -1,18 +1,19 @@
-from typing import List, Tuple, Dict, Any, Optional
-from ..helpers import file_search, FilesDataSaving
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
+from rich import print
+from starkbank import iso8583
+
+from ..helpers import FilesDataSaving, file_search
+from ..models import CycleIPM, ParseDb, ParseIPM, TupleManagerFile
 from ..template import mastercard
 from ..utils import print_custom_text
-from ..models import ParseDb, ParseIPM, CycleIPM, TupleManagerFile
-from starkbank import iso8583
-from datetime import datetime
-from rich import print
 
 
 class ISO8583ParseError(Exception): ...
 
 
 class MastercardISO8583Parse(FilesDataSaving):
-
     def __init__(self) -> None:
         super().__init__()
 
@@ -56,7 +57,6 @@ class MastercardISO8583Parse(FilesDataSaving):
 
         try:
             while index < len_raw:
-
                 payload, consumed = extract_iso(raw=raw, index=index, len_raw=len_raw)
                 index += consumed
 
@@ -130,9 +130,7 @@ class MastercardISO8583Parse(FilesDataSaving):
                 self._logging(file_name=file_name, row_count=msg_count, data=parse_ipm)
 
             for i in parse_ipm:
-
                 if i["MTI"] == "1240":
-
                     list_files.append(
                         [
                             i["MTI"],
@@ -178,7 +176,6 @@ class MastercardISO8583Parse(FilesDataSaving):
 
 
 if __name__ == "__main__":
-
     file = MastercardISO8583Parse()
     parse = file.parse_ipm(date_file="03/02/2026", cycle="CIC1")
     if parse:

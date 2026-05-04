@@ -1,20 +1,20 @@
+from binascii import unhexlify
+from typing import Dict, Final, Tuple
+
 from starkbank.iso8583.template.base import Template
 from starkbank.iso8583.utils.field import Field
 from starkbank.iso8583.utils.header import NoHeaderRule
 from starkbank.iso8583.utils.length import FixedLengthRule, VariableLengthRule
 from starkbank.iso8583.utils.parser import (
+    ParseBitmap,
+    ParseBitString,
     ParseDe048,
     ParseDe112,
     ParseString,
-    ParseBitmap,
-    ParseBitString,
 )
-from typing import Tuple, Final, Dict
-from binascii import unhexlify
 
 
 class IsoVersion:
-
     VERSION_1987: Final[str] = "1987"
     VERSION_1993: Final[str] = "1993"
 

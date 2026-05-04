@@ -1,5 +1,6 @@
-from typing import Optional, List
-from ..models import HIGHLIGHT, HIGHLIGHTS, BG_COLORS_SEARCH, FG_COLORS_SEARCH, COLORS
+from typing import List, Optional
+
+from ..models import BG_COLORS_SEARCH, COLORS, FG_COLORS_SEARCH, HIGHLIGHT, HIGHLIGHTS
 
 
 def print_custom_text(
@@ -20,5 +21,4 @@ def print_custom_text(
 
 
 if __name__ == "__main__":
-
     print_custom_text("HEITOR", highlight=["Bold"], color_background="Orange1")

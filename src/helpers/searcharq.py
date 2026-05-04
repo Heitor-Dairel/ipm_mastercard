@@ -1,13 +1,15 @@
+from datetime import datetime
+from pathlib import Path
 from typing import (
     Final,
+    Generator,
     Iterator,
     Optional,
-    Generator,
 )
-from ..models import CycleIPM, TupleManagerFile
-from pathlib import Path
-from datetime import datetime
+
 from rich import print
+
+from ..models import CycleIPM, TupleManagerFile
 
 _BASE_DIR: Final[Path] = Path(
     r"C:\Users\heitor.tavares\OneDrive - TRIVALE ADMINISTRACAO LTDA"
@@ -55,7 +57,6 @@ def file_search(file_date: str, cycle: CycleIPM) -> Optional[TupleManagerFile]:
 
 
 if __name__ == "__main__":
-
     arq = file_search(file_date="2/01/2026", cycle="CIC1")
 
     print(arq)

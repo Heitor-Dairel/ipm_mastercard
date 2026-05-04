@@ -1,12 +1,12 @@
-from typing import List, Final
-from ..models import ParseIPM
-from pathlib import Path
 import csv
 import json
+from pathlib import Path
+from typing import Final, List
+
+from ..models import ParseIPM
 
 
 class FilesDataSaving:
-
     def __init__(self) -> None:
         self._output_path_abs: Path = self._output_path()
 
@@ -40,12 +40,10 @@ class FilesDataSaving:
         with open(
             self._output_path_abs / f"{file_name}.txt.log", "w", encoding="utf-8"
         ) as arquivo:
-
             for i in data:
                 json_dict = json.dumps(i, indent=4, ensure_ascii=False)
                 arquivo.write(f"{json_dict}\n")
 
 
 if __name__ == "__main__":
-
     teste = ""

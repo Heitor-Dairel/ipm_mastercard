@@ -1,13 +1,13 @@
 from .types import (
-    ParseDb,
-    ParseIPM,
-    CycleIPM,
-    TupleManagerFile,
+    BG_COLORS_SEARCH,
+    COLORS,
+    FG_COLORS_SEARCH,
     HIGHLIGHT,
     HIGHLIGHTS,
-    BG_COLORS_SEARCH,
-    FG_COLORS_SEARCH,
-    COLORS,
+    CycleIPM,
+    ParseDb,
+    ParseIPM,
+    TupleManagerFile,
 )
 
 __all__ = [

@@ -1,14 +1,15 @@
-from ..core import MastercardISO8583Parse
-from ..models import ParseDb, CycleIPM
-from typing import Optional, List, Tuple
+import os
+from datetime import datetime
+from typing import List, Optional, Tuple
+
+import psycopg
+from dotenv import load_dotenv
 from psycopg import Connection, ServerCursor
 from psycopg.rows import TupleRow
-from dotenv import load_dotenv
-from datetime import datetime
 from rich import print
-import os
-import psycopg
 
+from ..core import MastercardISO8583Parse
+from ..models import CycleIPM, ParseDb
 
 load_dotenv()
 
@@ -20,7 +21,6 @@ password: Optional[str] = os.getenv("DB_PASSWORD")
 
 
 class DbOutgouing:
-
     _EXISTS_FILE = "SELECT 1 FROM hdg.tb_master_arquivo tma WHERE tma.nome_arquivo = %s"
 
     _INSERT_SQL = """
@@ -104,12 +104,10 @@ class DbOutgouing:
         )
 
         if parse:
-
             arq_parse, file_name = parse
             file_name += ".TXT"
 
         if arq_parse and file_name:
-
             date_reference = self._date_reference_file(file_name)
 
             self._transaction_db(
@@ -126,7 +124,6 @@ class DbOutgouing:
         cur_result = self._cur.execute(self._EXISTS_FILE, (file_name,))
 
         if cur_result.fetchone():
-
             self._cur.close()
 
             self._conn.close()
@@ -148,7 +145,6 @@ class DbOutgouing:
         arq_parse = parse
 
         try:
-
             self._cur.executemany(
                 DbOutgouing._INSERT_SQL,
                 [(file_name, cycle, date_reference)],
@@ -159,7 +155,6 @@ class DbOutgouing:
             new_id = row_id[0] if row_id else 0
 
             with self._cur.copy(DbOutgouing._COPY_SQL) as copy:
-
                 for row in arq_parse:
                     row.append(new_id)
                     copy.write_row(row)
@@ -175,7 +170,6 @@ class DbOutgouing:
             )
 
         except Exception as e:
-
             self._conn.rollback()
 
             self._cur.close()
@@ -195,7 +189,6 @@ class DbOutgouing:
     ) -> None:
 
         if not self._exists_file_master(file_name=file_name):
-
             self._insert_file_db(
                 file_name=file_name,
                 cycle=cycle,
