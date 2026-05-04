@@ -4,6 +4,3 @@ per-file-ignores =
     __init__.py:E203
 
 max-line-length = 150
-
-per-file-ignores =
-    __init__.py:E203
